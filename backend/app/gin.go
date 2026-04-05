@@ -83,9 +83,14 @@ func (c *ginService) Start(port string) {
 
 	c.SetupRoutes()
 	// Start sending periodic mDNS messages
-	services.GetDiscoverService().StopPeriodicBroadcast()
 
 	// Add: Re-subscribe handler
+
+	uname, ok := services.Storage().Get("uname")
+	if !ok {
+		uname = "transok"
+	}
+
 	handler := mdns_handlers.GetDiscoverHandler()
 	handler.Handle(consts.DiscoverPayload{
 		Type: "DISCOVER",
@@ -95,21 +100,7 @@ func (c *ginService) Start(port string) {
 			"Uname":    uname.(string),
 			"Platform": services.System().GetPlatform(),
 		}})
-	mdns.GetDispatcher().Subscribe(mdns_handlers.GetDiscoverHandler())
-
-	uname, ok := services.Storage().Get("uname")
-	if !ok {
-		uname = "transok"
-	}
-	services.GetDiscoverService().StartPeriodicBroadcast(portNum, consts.DiscoverPayload{
-		Type: "DISCOVER",
-		Payload: map[string]string{
-			"IP":       services.System().GetLocalIp(nil),
-			"Port":     fmt.Sprintf("%d", portNum),
-			"Uname":    uname.(string),
-			"Platform": services.System().GetPlatform(),
-		},
-	}, 3*time.Second)
+	mdns.GetDispatcher().Subscribe(handler)
 
 	c.httpServer = &http.Server{
 		Addr:    port,

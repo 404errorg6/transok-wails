@@ -90,11 +90,9 @@ func (s *DiscoverService) Start() error {
 		logger.Error("Error discovering devices", zap.Error(err))
 		return err
 	}
-	defer discovery.Close()
 
 	s.ctx, s.cancel = context.WithCancel(context.Background())
-
-	<-s.ctx.Done()
+	//TODO: Browsing ain't stopping
 	/*
 		entries := make(chan *zeroconf.ServiceEntry)
 		//err = resolver.Browse(s.ctx, "_transok._tcp", "local.", entries)
@@ -179,11 +177,16 @@ func (s *DiscoverService) Broadcast(port int, payload consts.DiscoverPayload) er
 			return err
 		}
 
-		publisher.Open()
 		s.server = publisher
-	} else {
-		s.server.Open()
 	}
+
+	s.server.Open() //Start broadcast
+
+	go func() { //Stop broadcast when context is done
+		<-s.ctx.Done()
+		s.server.Close()
+	}()
+
 	/*
 		// Modify service registration configuration
 		server, err := zeroconf.Register(
@@ -214,7 +217,7 @@ func (s *DiscoverService) Broadcast(port int, payload consts.DiscoverPayload) er
 	return nil
 }
 
-/* StartPeriodicBroadcast starts periodic broadcasting */
+/* StartPeriodicBroadcast starts periodic broadcasting
 func (s *DiscoverService) StartPeriodicBroadcast(port int, payload consts.DiscoverPayload, interval time.Duration) {
 	if s.ticker != nil {
 		return
@@ -245,7 +248,7 @@ func (s *DiscoverService) StartPeriodicBroadcast(port int, payload consts.Discov
 	}()
 }
 
-/* StopPeriodicBroadcast stops periodic broadcasting */
+// StopPeriodicBroadcast stops periodic broadcasting
 func (s *DiscoverService) StopPeriodicBroadcast() {
 	if s.ticker != nil {
 		s.ticker.Stop()
@@ -253,16 +256,15 @@ func (s *DiscoverService) StopPeriodicBroadcast() {
 		close(s.done)
 		s.ticker = nil
 
-		if s.server != nil {
-			s.server.Close()
-			s.server = nil
-		}
+		//		if s.server != nil {
+		//			s.server.Close()
+		//			s.server = nil
+		//		}
 	}
 }
-
+*/
 // Stop method
 func (s *DiscoverService) Stop() {
-	s.StopPeriodicBroadcast()
 	if s.cancel != nil {
 		s.cancel()
 	}
