@@ -23,7 +23,7 @@ var (
 	storageOnce sync.Once
 )
 
-// NewStorageService 现在将确保只创建一个 StorageService 实例
+// Storage ensures that only one instance of StorageService is created
 func Storage() *StorageService {
 	if storage == nil {
 		storageOnce.Do(func() {
@@ -35,64 +35,64 @@ func Storage() *StorageService {
 	return storage
 }
 
-// Init 初始化存储服务，根据环境变量设置不同的存储路径
+// Init initializes the storage service and sets storage paths based on the environment
 func (s *StorageService) Init(ctx context.Context) error {
 	s.ctx = ctx
 
-	// 根据环境变量获取存储路径
+	// Get storage path based on environment variables
 	env := system.GetEnv()
-	fmt.Println("环境", env)
+	fmt.Println("Environment:", env)
 	if env == "" {
-		env = "dev" // 默认为开发环境
+		env = "dev" // Default to development environment
 	}
 
-	// 获取适合当前操作系统的基础存储路径
+	// Get the base storage path suitable for the current operating system
 	basePath := common.GetBasePath()
 	fmt.Println("basePath => ", basePath)
 
 	s.storagePath = filepath.Join(basePath, "storage.json")
 
-	// 确保存储目录存在
+	// Ensure the storage directory exists
 	if err := os.MkdirAll(filepath.Dir(s.storagePath), 0755); err != nil {
-		return fmt.Errorf("创建存储目录失败: %w", err)
+		return fmt.Errorf("failed to create storage directory: %w", err)
 	}
 
-	// 先加载现有数据
+	// Load existing data first
 	if err := s.loadData(); err != nil {
 		return err
 	}
 
-	// 然后再检查并设置默认值
+	// Then check and set default values
 	keys := s.GetKeys()
 	if !slices.Contains(keys, "language") {
-		fmt.Println("设置语言为en")
+		fmt.Println("Setting language to en")
 		s.Set("language", "en")
 	}
 
 	if !slices.Contains(keys, "port") {
-		fmt.Println("设置端口为9482")
+		fmt.Println("Setting port to 9482")
 		s.Set("port", "9482")
 	}
 
 	if !slices.Contains(keys, "share-list") {
-		fmt.Println("设置share-list为空")
+		fmt.Println("Setting share-list to empty")
 		s.Set("share-list", []interface{}{})
 	}
 
 	if !slices.Contains(keys, "uname") {
-		fmt.Println("设置uname为transok")
+		fmt.Println("Setting uname to transok")
 		s.Set("uname", "transok")
 	}
 
 	if !slices.Contains(keys, "is-share") {
-		fmt.Println("设置is-share为false")
+		fmt.Println("Setting is-share to false")
 		s.Set("is-share", false)
 	}
 
 	return nil
 }
 
-// Set 设置键值对
+// Set sets a key-value pair
 func (s *StorageService) Set(key string, value interface{}) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -101,7 +101,7 @@ func (s *StorageService) Set(key string, value interface{}) error {
 	return s.saveData()
 }
 
-// Get 获取值
+// Get retrieves a value
 func (s *StorageService) Get(key string) (interface{}, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -110,7 +110,7 @@ func (s *StorageService) Get(key string) (interface{}, bool) {
 	return value, exists
 }
 
-// Delete 删除键值对
+// Delete removes a key-value pair
 func (s *StorageService) Delete(key string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -119,30 +119,30 @@ func (s *StorageService) Delete(key string) error {
 	return s.saveData()
 }
 
-// loadData 从文件加载数据
+// loadData loads data from file
 func (s *StorageService) loadData() error {
 	data, err := os.ReadFile(s.storagePath)
 	if os.IsNotExist(err) {
-		return nil // 文件不存在时返回空数据
+		return nil // Return empty data if file does not exist
 	}
 	if err != nil {
-		return fmt.Errorf("读取存储文件失败: %w", err)
+		return fmt.Errorf("failed to read storage file: %w", err)
 	}
 
 	return json.Unmarshal(data, &s.data)
 }
 
-// saveData 保存数据到文件
+// saveData saves data to file
 func (s *StorageService) saveData() error {
 	data, err := json.MarshalIndent(s.data, "", "  ")
 	if err != nil {
-		return fmt.Errorf("序列化数据失败: %w", err)
+		return fmt.Errorf("failed to serialize data: %w", err)
 	}
 
 	return os.WriteFile(s.storagePath, data, 0644)
 }
 
-// GetKeys 获取所有键列表
+// GetKeys returns all keys in storage
 func (s *StorageService) GetKeys() []string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -154,7 +154,7 @@ func (s *StorageService) GetKeys() []string {
 	return keys
 }
 
-// Clear 清除所有数据
+// Clear removes all data from storage
 func (s *StorageService) Clear() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

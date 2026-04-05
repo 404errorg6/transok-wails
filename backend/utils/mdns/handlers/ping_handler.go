@@ -17,6 +17,6 @@ func (h *PingHandler) GetType() string {
 }
 
 func (h *PingHandler) Handle(payload consts.DiscoverPayload) {
-	// 处理聊天消息的逻辑
+	// Logic for handling messages
 	fmt.Println("PingHandler: ", "PONG")
 }

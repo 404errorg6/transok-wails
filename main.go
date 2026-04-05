@@ -74,7 +74,7 @@ func main() {
 			storageSvc.Init(ctx)
 			discoverSvc.Start()
 			shareSvc.Start(ctx)
-			/* 订阅mdns消息 */
+			/* Subscribe to mDNS messages */
 			mdns.GetDispatcher().Subscribe(mdns_handlers.GetDiscoverHandler())
 			mdns.GetDispatcher().Subscribe(mdns_handlers.NewPingHandler())
 		},

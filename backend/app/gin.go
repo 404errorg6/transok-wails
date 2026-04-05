@@ -9,10 +9,13 @@ import (
 	"sync"
 	"time"
 	"transok/backend/apis"
+	"transok/backend/consts"
 	"transok/backend/domain/resp"
 	"transok/backend/middleware"
 	"transok/backend/services"
 	"transok/backend/utils/common"
+	"transok/backend/utils/mdns"
+	mdns_handlers "transok/backend/utils/mdns/handlers"
 
 	"io/fs"
 
@@ -54,9 +57,9 @@ func Gin() *ginService {
 }
 
 func (c *ginService) Start(port string) {
-	// 检查服务是否已经在运行
+	// Check if the service is already running
 	if c.httpServer != nil {
-		log.Println("服务器已经在运行中")
+		log.Println("Server is already running")
 		return
 	}
 
@@ -73,31 +76,40 @@ func (c *ginService) Start(port string) {
 	if port != ":4343" {
 		_, err := fmt.Sscanf(port, ":%d", &portNum)
 		if err != nil {
-			log.Printf("解析端口号失败: %v，将使用默认端口 4343\n", err)
+			log.Printf("Failed to parse port number: %v, using default port 4343\n", err)
 			portNum = 4343
 		}
 	}
 
 	c.SetupRoutes()
-	/* 开始发送轮询mdns消息 */
-	// services.GetDiscoverService().StopPeriodicBroadcast()
+	// Start sending periodic mDNS messages
+	services.GetDiscoverService().StopPeriodicBroadcast()
 
-	// 添加：重新订阅处理器
-	// mdns.GetDispatcher().Subscribe(mdns_handlers.NewDiscoverHandler())
+	// Add: Re-subscribe handler
+	handler := mdns_handlers.GetDiscoverHandler()
+	handler.Handle(consts.DiscoverPayload{
+		Type: "DISCOVER",
+		Payload: map[string]string{
+			"IP":       services.System().GetLocalIp(nil),
+			"Port":     fmt.Sprintf("%d", portNum),
+			"Uname":    uname.(string),
+			"Platform": services.System().GetPlatform(),
+		}})
+	mdns.GetDispatcher().Subscribe(mdns_handlers.GetDiscoverHandler())
 
-	// uname, ok := services.Storage().Get("uname")
-	// if !ok {
-	// 	uname = "transok"
-	// }
-	// services.GetDiscoverService().StartPeriodicBroadcast(portNum, consts.DiscoverPayload{
-	// 	Type: "DISCOVER",
-	// 	Payload: map[string]string{
-	// 		"IP":       services.System().GetLocalIp(),
-	// 		"Port":     fmt.Sprintf("%d", portNum),
-	// 		"Uname":    uname.(string),
-	// 		"Platform": services.System().GetPlatform(),
-	// 	},
-	// }, 3*time.Second)
+	uname, ok := services.Storage().Get("uname")
+	if !ok {
+		uname = "transok"
+	}
+	services.GetDiscoverService().StartPeriodicBroadcast(portNum, consts.DiscoverPayload{
+		Type: "DISCOVER",
+		Payload: map[string]string{
+			"IP":       services.System().GetLocalIp(nil),
+			"Port":     fmt.Sprintf("%d", portNum),
+			"Uname":    uname.(string),
+			"Platform": services.System().GetPlatform(),
+		},
+	}, 3*time.Second)
 
 	c.httpServer = &http.Server{
 		Addr:    port,
@@ -118,7 +130,7 @@ func Storage() {
 }
 
 func (c *ginService) Stop() {
-	// 先停止 MDNS 广播
+	// Stop mDNS broadcast first
 	// services.GetDiscoverService().StopPeriodicBroadcast()
 
 	if c.cancel != nil {
@@ -126,23 +138,23 @@ func (c *ginService) Stop() {
 	}
 
 	if c.httpServer != nil {
-		// 创建一个新的上下文用于关闭操作
+		// Create a new context for shutdown operation
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		// 先关闭所有新的连接
+		// Close all new connections first
 		c.httpServer.SetKeepAlivesEnabled(false)
 
-		// 关闭服务器
+		// Shut down the server
 		if err := c.httpServer.Shutdown(ctx); err != nil {
 			log.Printf("Server forced to shutdown: %v\n", err)
-			// 如果优雅关闭失败，强制关闭
+			// If graceful shutdown fails, force close
 			if err := c.httpServer.Close(); err != nil {
 				log.Printf("Server force close error: %v\n", err)
 			}
 		}
 
-		// 重置服务器状态
+		// Reset server state
 		c.httpServer = nil
 		c.server = nil
 		c.routesSetup = false
@@ -179,7 +191,7 @@ func (c *ginService) SetupRoutes() {
 	{
 		con := apis.DownloadApi{}
 
-		// 修改静态文件服务配置，指向 downpage 子目录
+		// Modify static file server configuration to point to the downpage subdirectory
 		templatesFS, err := fs.Sub(downpageFS, "templates/downpage")
 		if err != nil {
 			log.Printf("Failed to sub downpage directory: %v\n", err)

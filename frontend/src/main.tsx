@@ -11,7 +11,7 @@ const container = document.getElementById('root')
 
 const root = createRoot(container!)
 
-// 确保 i18n 初始化完成后再渲染应用
+// Ensure i18n initialization is complete before rendering the application
 initI18n().then(() => {
   root.render(
     <BrowserRouter>

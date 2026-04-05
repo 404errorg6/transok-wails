@@ -14,10 +14,10 @@ import (
 
 var Log *zap.Logger
 
-// InitLogger 初始化日志
+// InitLogger initializes the logger
 func InitLogger() {
 	basePath := common.GetBasePath()
-	// 配置编码器
+	// Configure encoder
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:        "time",
 		LevelKey:       "level",
@@ -34,25 +34,25 @@ func InitLogger() {
 
 	var cores []zapcore.Core
 
-	// 始终添加控制台输出
+	// Always add console output
 	cores = append(cores, zapcore.NewCore(
 		zapcore.NewConsoleEncoder(encoderConfig),
 		zapcore.AddSync(os.Stdout),
 		zapcore.DebugLevel,
 	))
 
-	// 根据配置决定是否启用文件日志
+	// Decide whether to enable file logging based on configuration
 	if consts.ENABLE_LOG {
-		// 构建完整的日志路径
+		// Build the full log path
 		fullLogPath := filepath.Join(basePath, "logs", "app.log")
 
-		// 确保日志目录存在
+		// Ensure the log directory exists
 		logDir := filepath.Dir(fullLogPath)
 		if err := os.MkdirAll(logDir, 0755); err != nil {
-			panic("创建日志目录失败: " + err.Error())
+			panic("Failed to create log directory: " + err.Error())
 		}
 
-		// 配置日志轮转
+		// Configure log rotation
 		writer := &lumberjack.Logger{
 			Filename:   fullLogPath,
 			MaxSize:    consts.DEFAULT_LOG_MAX_SIZE,
@@ -61,7 +61,7 @@ func InitLogger() {
 			Compress:   true,
 		}
 
-		// 添加文件输出
+		// Add file output
 		cores = append(cores, zapcore.NewCore(
 			zapcore.NewJSONEncoder(encoderConfig),
 			zapcore.AddSync(writer),
@@ -69,37 +69,37 @@ func InitLogger() {
 		))
 	}
 
-	// 创建logger
+	// Create logger
 	core := zapcore.NewTee(cores...)
 	Log = zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
 }
 
-// timeEncoder 自定义时间编码格式
+// timeEncoder defines the custom time encoding format
 func timeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 	enc.AppendString(t.Format("2006-01-02 15:04:05.000"))
 }
 
-// Debug 输出Debug级别日志
+// Debug logs debug-level messages
 func Debug(msg string, fields ...zap.Field) {
 	Log.Debug(msg, fields...)
 }
 
-// Info 输出Info级别日志
+// Info logs info-level messages
 func Info(msg string, fields ...zap.Field) {
 	Log.Info(msg, fields...)
 }
 
-// Warn 输出Warn级别日志
+// Warn logs warn-level messages
 func Warn(msg string, fields ...zap.Field) {
 	Log.Warn(msg, fields...)
 }
 
-// Error 输出Error级别日志
+// Error logs error-level messages
 func Error(msg string, fields ...zap.Field) {
 	Log.Error(msg, fields...)
 }
 
-// Fatal 输出Fatal级别日志
+// Fatal logs fatal-level messages
 func Fatal(msg string, fields ...zap.Field) {
 	Log.Fatal(msg, fields...)
 }

@@ -7,10 +7,10 @@ export type RouteType = RouteObject & {
   children?: RouteType[]
 }
 
-const HomeView /* 主页 */ = lazy(() => import('../views/Home/Home'))
-const SettingsView /* 设置页面 */ = lazy(() => import('../views/Settings/Settings'))
-const DiscoverView /* 设备发现页面(未启用) */ = lazy(() => import('../views/Discover/Discover'))
-const ViewAllUrlView /* 展示所有分享url页 */ = lazy(() => import('../views/ViewAllUrl/ViewAllUrl'))
+const HomeView /* Home page */ = lazy(() => import('../views/Home/Home'))
+const SettingsView /* Settings page */ = lazy(() => import('../views/Settings/Settings'))
+const DiscoverView /* Device discovery page (disabled) */ = lazy(() => import('../views/Discover/Discover'))
+const ViewAllUrlView /* Show all share URL page */ = lazy(() => import('../views/ViewAllUrl/ViewAllUrl'))
 
 export const routes: RouteType[] = [
   {

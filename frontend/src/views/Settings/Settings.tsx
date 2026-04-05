@@ -16,7 +16,7 @@ export interface ISettingItem {
 }
 
 /**
- * 设置页面
+ * Settings page
  * @returns
  */
 const Settings: React.FC = () => {
@@ -66,7 +66,7 @@ const Settings: React.FC = () => {
 
                 setPort(value)
                 Stop()
-                // 保存端口值到存储
+                // Save port value to storage
                 await Set('port', value)
               }}
               placeholder="9482"
@@ -133,8 +133,8 @@ const Settings: React.FC = () => {
   ]
 
   /**
-   * 改变语言
-   * @param lang 语言
+   * Change language
+   * @param lang Language
    */
   const changeLanguage = (lang: string) => {
     i18n.changeLanguage(lang)

@@ -25,13 +25,13 @@ func (s *ShareService) Start(ctx context.Context) {
 	s.ctx = ctx
 }
 
-/* 设置分享密钥 */
+/* Set sharing captcha */
 func (s *ShareService) SetCaptcha(captcha string) {
 	store := Storage()
 	store.Set("captcha", captcha)
 }
 
-/* 获取分享密钥 */
+/* Get sharing captcha */
 func (s *ShareService) GetCaptcha() string {
 	store := Storage()
 	captcha, exists := store.Get("captcha")

@@ -1,7 +1,7 @@
 /**
- * 计算文件大小
- * @param size 文件大小的字节数
- * @returns 文件大小 KB MB GB
+ * Calculate file size
+ * @param size File size in bytes
+ * @returns File size in KB, MB, GB
  */
 export const calcFileSize = (size: number) => {
   if (size < 1024) {

@@ -23,15 +23,15 @@ const Home: React.FC = () => {
   const captchaRef = useRef<DialogCaptchaRef>(null)
   const { confirm, slotConfirm, commonFooter } = useConfirm()
 
-  const [captcha, setCaptcha] /* 分享密钥 */ = useState<string>('')
-  const uploaderRef /* 上传器 */ = useRef<UploaderRef>(null)
-  const event$ /* 事件总栈 */ = useEventEmitter<UploaderEvent>()
+  const [captcha, setCaptcha] /* Share captcha */ = useState<string>('')
+  const uploaderRef /* Uploader */ = useRef<UploaderRef>(null)
+  const event$ /* Event hub */ = useEventEmitter<UploaderEvent>()
 
-  const actionList /* 操作列表 */ = [
-    // { 暂时移除
-    //   icon: 'i-tabler:device-desktop-search',
-    //   onClick: () => navigate('/discover')
-    // },
+  const actionList /* Action list */ = [
+    {
+      icon: 'i-tabler:device-desktop-search',
+      onClick: () => navigate('/discover')
+    },
     {
       icon: 'i-tabler:lock',
       onClick: () =>
@@ -51,7 +51,7 @@ const Home: React.FC = () => {
   ]
 
   /**
-   * 文件选择/添加后回调
+   * Callback after file selection/addition
    * @param files
    */
   const handleFileSelect = (files: FileInfo[]) => {
@@ -64,7 +64,7 @@ const Home: React.FC = () => {
   }
 
   /**
-   * 切换分享状态
+   * Toggle sharing state
    * @returns
    */
   const toggleShare = async () => {
@@ -79,7 +79,7 @@ const Home: React.FC = () => {
   }
 
   /**
-   * 同步分享状态
+   * Sync sharing state
    * @returns
    */
   const syncIsShare = async () => {
@@ -96,7 +96,7 @@ const Home: React.FC = () => {
   }
 
   /**
-   * 同步分享密钥
+   * Sync sharing captcha
    */
   const syncCaptcha = async () => {
     const captcha = await GetCaptcha()
@@ -104,7 +104,7 @@ const Home: React.FC = () => {
   }
 
   /**
-   * 事件订阅
+   * Event subscription
    */
   event$.useSubscription(async payload => {
     const { type, data } = payload
@@ -151,7 +151,7 @@ const Home: React.FC = () => {
 
     let interval: NodeJS.Timeout | null = null
 
-    // 无论是否分享，都需要同步share-list
+    // Always sync share-list regardless of sharing state
     interval = setInterval(async () => {
       const shareList = await GetShareList()
       console.log('shareList', shareList)

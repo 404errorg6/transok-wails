@@ -52,11 +52,11 @@ func (h *DiscoverHandler) Handle(payload consts.DiscoverPayload) {
 		json.Unmarshal(jsonData, &deviceList)
 	}
 
-	// 通过 Address 去重，如果存在则更新信息
+	// Deduplicate by Address; update information if it already exists
 	found := false
 	for i, dev := range deviceList {
 		if dev.Address == device.Address {
-			deviceList[i] = device // 更新设备信息
+			deviceList[i] = device // Update device info
 			found = true
 			break
 		}
@@ -68,28 +68,28 @@ func (h *DiscoverHandler) Handle(payload consts.DiscoverPayload) {
 	services.Storage().Set("discover-list", deviceList)
 }
 
-/* 测试地址是否连通 */
+/* Test if the address is reachable */
 func ping(address string) bool {
 	resp, err := http.Get("http://" + address + "/discover/ping")
 	if err != nil {
-		fmt.Printf("ping %s 失败: %v\n", address, err)
+		fmt.Printf("ping %s failed: %v\n", address, err)
 		return false
 	}
 	defer resp.Body.Close()
 
-	// 读取响应内容
+	// Read response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("读取响应失败: %v\n", err)
+		fmt.Printf("failed to read response: %v\n", err)
 		return false
 	}
 
-	// 解析JSON响应
+	// Parse JSON response
 	var result struct {
 		Success bool `json:"success"`
 	}
 	if err := json.Unmarshal(body, &result); err != nil {
-		fmt.Printf("解析JSON失败: %v\n", err)
+		fmt.Printf("failed to parse JSON: %v\n", err)
 		return false
 	}
 
@@ -106,7 +106,7 @@ func mapperDiscoverDevice(device map[string]interface{}) DiscoverDevice {
 	}
 }
 
-/* 获取发现列表 */
+/* Get discovery list */
 func (h *DiscoverHandler) GetDiscoverList() []DiscoverDevice {
 	var deviceList []DiscoverDevice
 	if discoverList, ok := services.Storage().Get("discover-list"); ok {
@@ -114,7 +114,7 @@ func (h *DiscoverHandler) GetDiscoverList() []DiscoverDevice {
 		json.Unmarshal(jsonData, &deviceList)
 	}
 
-	// 只返回能 ping 通的设备，并从存储中删除不可访问的设备
+	// Return only reachable devices and remove inaccessible ones from storage
 	var accessibleDevices []DiscoverDevice
 	var needUpdate bool
 
@@ -122,11 +122,11 @@ func (h *DiscoverHandler) GetDiscoverList() []DiscoverDevice {
 		if ping(dev.Address) {
 			accessibleDevices = append(accessibleDevices, dev)
 		} else {
-			needUpdate = true // 标记需要更新存储
+			needUpdate = true // Mark storage for update
 		}
 	}
 
-	// 如果有不可访问的设备被过滤掉，更新存储
+	// Update storage if any inaccessible devices were filtered out
 	if needUpdate {
 		services.Storage().Set("discover-list", accessibleDevices)
 	}

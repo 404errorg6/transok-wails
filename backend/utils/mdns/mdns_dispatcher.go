@@ -5,13 +5,13 @@ import (
 	"transok/backend/consts"
 )
 
-// Handler 使用handlers包中定义的接口
+// Handler uses the interface defined in the handlers package
 type Handler interface {
 	GetType() string
 	Handle(payload consts.DiscoverPayload)
 }
 
-// Dispatcher MDNS消息调度器
+// Dispatcher is the mDNS message dispatcher
 type Dispatcher struct {
 	handlers map[string][]Handler
 	mu       sync.RWMutex
@@ -22,7 +22,7 @@ var (
 	once              sync.Once
 )
 
-// GetDispatcher 获取单例的调度器实例
+// GetDispatcher returns the singleton dispatcher instance
 func GetDispatcher() *Dispatcher {
 	once.Do(func() {
 		defaultDispatcher = &Dispatcher{
@@ -32,7 +32,7 @@ func GetDispatcher() *Dispatcher {
 	return defaultDispatcher
 }
 
-// Subscribe 修改为接收Handler接口
+// Subscribe is modified to receive the Handler interface
 func (d *Dispatcher) Subscribe(handler Handler) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -44,7 +44,7 @@ func (d *Dispatcher) Subscribe(handler Handler) {
 	d.handlers[messageType] = append(d.handlers[messageType], handler)
 }
 
-// Unsubscribe 取消订阅特定类型的消息处理
+// Unsubscribe unsubscribes from processing a specific type of message
 func (d *Dispatcher) Unsubscribe(messageType string, handler Handler) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -59,7 +59,7 @@ func (d *Dispatcher) Unsubscribe(messageType string, handler Handler) {
 	}
 }
 
-// Dispatch 分发消息到对应的处理器
+// Dispatch dispatches messages to the corresponding handlers
 func (d *Dispatcher) Dispatch(payload consts.DiscoverPayload) {
 	d.mu.RLock()
 	handlers, exists := d.handlers[payload.Type]
@@ -69,7 +69,7 @@ func (d *Dispatcher) Dispatch(payload consts.DiscoverPayload) {
 		return
 	}
 
-	// 调用所有注册的处理器
+	// Call all registered handlers
 	for _, handler := range handlers {
 		go handler.Handle(payload)
 	}
