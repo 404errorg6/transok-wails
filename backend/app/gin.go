@@ -91,16 +91,20 @@ func (c *ginService) Start(port string) {
 		uname = "transok"
 	}
 
-	handler := mdns_handlers.GetDiscoverHandler()
-	handler.Handle(consts.DiscoverPayload{
+	payload := consts.DiscoverPayload{
 		Type: "DISCOVER",
 		Payload: map[string]string{
 			"IP":       services.System().GetLocalIp(nil),
 			"Port":     fmt.Sprintf("%d", portNum),
 			"Uname":    uname.(string),
 			"Platform": services.System().GetPlatform(),
-		}})
+		}}
+
+	handler := mdns_handlers.GetDiscoverHandler()
+	handler.Handle(payload)
 	mdns.GetDispatcher().Subscribe(handler)
+
+	services.GetDiscoverService().Broadcast(portNum, payload)
 
 	c.httpServer = &http.Server{
 		Addr:    port,

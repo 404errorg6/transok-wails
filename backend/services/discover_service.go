@@ -19,12 +19,13 @@ import (
 )
 
 type DiscoverService struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	server *zeroconf.Client
-	ticker *time.Ticker
-	done   chan bool
-	id     string
+	ctx     context.Context
+	cancel  context.CancelFunc
+	browser *zeroconf.Client // Added browser client
+	server  *zeroconf.Client // Used as publisher
+	ticker  *time.Ticker
+	done    chan bool
+	id      string
 }
 
 var (
@@ -33,14 +34,13 @@ var (
 	discoveryType   = zeroconf.NewType("_transok._tcp")
 )
 
-func init() {
-	discoveryType.Domain = "local."
-}
-
 func GetDiscoverService() *DiscoverService {
 	once.Do(func() {
+		ctx, cancel := context.WithCancel(context.Background())
 		discoverService = &DiscoverService{
-			id: uuid.New().String(),
+			id:     uuid.New().String(),
+			ctx:    ctx,
+			cancel: cancel,
 		}
 	})
 	return discoverService
@@ -48,10 +48,19 @@ func GetDiscoverService() *DiscoverService {
 
 /* Start starts listening for mDNS broadcasts */
 func (s *DiscoverService) Start() error {
+	if s.browser != nil {
+		return nil // Already started
+	}
+
 	logger.Info("Starting discovery...")
 
-	discovery := zeroconf.New().Browse(func(e zeroconf.Event) {
+	browser := zeroconf.New().Browse(func(e zeroconf.Event) {
+		//		if e.Op != zeroconf.OpAdded {
+		//			return
+		//		}
+
 		logger.Debug("Found device", zap.Any("entry", e))
+
 		var jsonData string
 		for _, txt := range e.Text {
 			if len(txt) > 5 && txt[:5] == "data=" {
@@ -76,69 +85,21 @@ func (s *DiscoverService) Start() error {
 		}
 
 		// Skip if sender is self
-		// if data.Sender == s.id {
-		// 	continue
-		// }
+		//if data.Sender == s.id {
+		//	return
+		//}
 
 		logger.Info("Service discovered", zap.Any("data", data))
 		mdns.GetDispatcher().Dispatch(data)
-	},
-		discoveryType)
+	}, discoveryType)
 
-	_, err := discovery.Open() //Start discovering
+	client, err := browser.Open()
 	if err != nil {
 		logger.Error("Error discovering devices", zap.Error(err))
 		return err
 	}
+	s.browser = client
 
-	s.ctx, s.cancel = context.WithCancel(context.Background())
-	//TODO: Browsing ain't stopping
-	/*
-		entries := make(chan *zeroconf.ServiceEntry)
-		//err = resolver.Browse(s.ctx, "_transok._tcp", "local.", entries)
-
-		go func() {
-			logger.Info("Waiting for service discovery...")
-
-			for entry := range entries {
-				logger.Debug("Received raw service entry", zap.Any("entry", entry))
-
-				// Look for TXT record containing data
-				var jsonData string
-				for _, txt := range entry.Text {
-					if len(txt) > 5 && txt[:5] == "data=" {
-						jsonData = txt[5:]
-						break
-					}
-				}
-
-				if jsonData == "" {
-					continue
-				}
-
-				// Remove extra escape characters
-				jsonData = strings.ReplaceAll(jsonData, `\"`, `"`)
-
-				var data consts.DiscoverPayload
-
-				// Parse JSON string into DiscoverPayload struct
-				if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
-					logger.Error("Failed to parse JSON data", zap.Error(err))
-					continue
-				}
-
-				// Skip if sender is self
-				// if data.Sender == s.id {
-				// 	continue
-				// }
-
-				logger.Info("Service discovered", zap.Any("data", data))
-
-				// Use dispatcher to handle the message
-				mdns.GetDispatcher().Dispatch(data)
-			}
-		}()
-	*/
 	return nil
 }
 
@@ -162,110 +123,53 @@ func (s *DiscoverService) Broadcast(port int, payload consts.DiscoverPayload) er
 		fmt.Sprintf("data=%s", string(jsonBytes)),
 	}
 
-	if s.server == nil {
-		service := zeroconf.NewService(
-			discoveryType,
-			fmt.Sprintf("TransokService_%s", s.id),
-			uint16(port),
-		)
-		service.Text = txtRecords
-
-		publisher := zeroconf.New().Publish(service)
-		_, err = publisher.Open() //Start broadcast
-		if err != nil {
-			logger.Error("Error broadcasting service", zap.Error(err))
-			return err
-		}
-
-		s.server = publisher
+	// If already broadcasting, close old one to update payload
+	if s.server != nil {
+		s.server.Close()
+		s.server = nil
 	}
 
-	s.server.Open() //Start broadcast
+	service := zeroconf.NewService(
+		discoveryType,
+		fmt.Sprintf("TransokService_%s", s.id),
+		uint16(port),
+	)
+	service.Text = txtRecords
 
-	go func() { //Stop broadcast when context is done
+	publisher := zeroconf.New().Publish(service)
+	_, err = publisher.Open()
+	if err != nil {
+		logger.Error("Error broadcasting service", zap.Error(err))
+		return err
+	}
+
+	go func() { //Stop broadcast when done
 		<-s.ctx.Done()
-		s.server.Close()
+		publisher.Close()
 	}()
 
-	/*
-		// Modify service registration configuration
-		server, err := zeroconf.Register(
-			fmt.Sprintf("TransokService_%s", s.id),
-			"_transok._tcp",
-			"local.",
-			port,
-			txtRecords,
-			nil,
-		)
-		if err != nil {
-			logger.Error("Failed to register broadcast service", zap.Error(err))
-			return err
-		}
+	s.server = publisher
 
-		// Ensure old instance is closed before saving new one
-		if s.server != nil {
-			s.server.Shutdown()
-		}
-		s.server = server
+	logger.Info("Service started broadcasting",
+		zap.String("id", s.id),
+		zap.Int("port", port),
+		zap.Any("payload", discoverPayload),
+	)
 
-		logger.Info("Service started broadcasting",
-			zap.String("id", s.id),
-			zap.Int("port", port),
-			zap.Any("payload", discoverPayload),
-		)
-	*/
 	return nil
 }
 
-/* StartPeriodicBroadcast starts periodic broadcasting
-func (s *DiscoverService) StartPeriodicBroadcast(port int, payload consts.DiscoverPayload, interval time.Duration) {
-	if s.ticker != nil {
-		return
-	}
-
-	s.ticker = time.NewTicker(interval)
-	s.done = make(chan bool)
-
-	go func() {
-		_ = s.Broadcast(port, payload)
-
-		for {
-			select {
-			case <-s.ticker.C:
-				if s.server != nil {
-					s.server.Close()
-					s.server = nil
-				}
-				_ = s.Broadcast(port, payload)
-			case <-s.done:
-				if s.server != nil {
-					s.server.Close()
-					s.server = nil
-				}
-				return
-			}
-		}
-	}()
-}
-
-// StopPeriodicBroadcast stops periodic broadcasting
-func (s *DiscoverService) StopPeriodicBroadcast() {
-	if s.ticker != nil {
-		s.ticker.Stop()
-		s.done <- true
-		close(s.done)
-		s.ticker = nil
-
-		//		if s.server != nil {
-		//			s.server.Close()
-		//			s.server = nil
-		//		}
-	}
-}
-*/
 // Stop method
 func (s *DiscoverService) Stop() {
 	if s.cancel != nil {
 		s.cancel()
+	}
+	if s.server != nil {
+		s.server.Close()
+		s.server = nil
+	}
+	if s.browser != nil {
+		s.browser.Close()
+		s.browser = nil
 	}
 }
