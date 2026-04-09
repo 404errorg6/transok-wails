@@ -44,7 +44,6 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest 
       
       - name: 'Build app'
-        working-directory: ./transok-wails
         run: |
           wails build
           ls build/bin
