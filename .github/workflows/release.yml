@@ -1,20 +1,22 @@
-name: Wails Build
+name: Wails Build #currently failing for linux build
 
-on: [push]
+on:
+  push:
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
 
 env:
-  NODE_OPTIONS: "--max-old-space-size=4096"
+ NODE_OPTIONS: "--max-old-space-size=4096"
 
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
-        # 22.04 is perfect for the 4.0-dev package
-        os: [ubuntu-22.04, windows-latest, macos-latest]
+        os: [windows-latest, macos-latest]
 
     runs-on: ${{ matrix.os }}
   
@@ -32,27 +34,27 @@ jobs:
         with:
           go-version: '1.25'
 
-      - name: 'Install Wails'
+      - name: 'Install wails'
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-      - name: 'Install Linux dependencies'
-        if: matrix.os == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          # Added -y so the runner doesn't wait for "Yes/No" input and hang
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev pkg-config build-essential
+#      - name: 'Install Linux dependencies'
+#        if: matrix.os == 'ubuntu-22.04'
+#        run: |
+#          #echo "deb http://gb.archive.ubuntu.com/ubuntu jammy main" | sudo tee -a /etc/apt/sources.list  #Add repo for installing dependencies
+#          sudo apt update
+#          #sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev pkg-config build-essential
+#          sudo apt install -y libgtk-3-dev libwebkit2gtk-4.0-dev
 
+      
       - name: 'Build app'
         run: |
-          # 1. This fixes the ENOENT wailsjs error you had earlier
-          wails generate module
-          # 2. Build the production binary
           wails build
-          
+          ls build/bin
+
       - name: 'Upload Artifacts'
         uses: actions/upload-artifact@v4
         with:
-          name: transok-${{ matrix.os }}
+          name: transok-app-${{ matrix.os }}
           path: |
             build/bin/*
             !build/bin/*.worker.js
