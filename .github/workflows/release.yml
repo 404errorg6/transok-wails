@@ -16,7 +16,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: windows-latest
+        output_name: windows
+
+        os: macos-latest
+        output_name: macos
 
     runs-on: ${{ matrix.os }}
   
@@ -49,15 +53,28 @@ jobs:
       - name: 'Build app'
         run: |
           wails build
-          ls build/bin
 
-      - name: 'Upload Artifacts'
-        uses: actions/upload-artifact@v4
-        with:
-          name: transok-app-${{ matrix.os }}
-          path: |
-            build/bin/*
-            !build/bin/*.worker.js
+      - name: Rename binary with OS name
+        shell: bash
+        run: |
+          # Move into the build directory
+          cd build/bin/
+              
+          # Find your binary (assuming it starts with 'transok-app')
+          # This replaces the original name with name-os_name
+          for file in transok-app*; do
+            if [[ -f "$file" ]]; then
+              # Get the extension if it exists (e.g., .exe)
+              filename="${file%.*}"
+              extension="${file##*.}"
+                  
+              if [ "$filename" == "$extension" ]; then
+                mv "$file" "${filename}-${{ matrix.os }}"
+              else
+                mv "$file" "${filename}-${{ matrix.os }}.${extension}"
+              fi
+            fi
+          done
 
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -66,4 +83,4 @@ jobs:
           files: |
             build/bin/*
             !build/bin/*.worker.js
-            
+
