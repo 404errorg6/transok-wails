@@ -16,11 +16,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: windows-latest
-        output_name: windows
+        include:
+          os: windows-latest
+          output_name: windows
 
-        os: macos-latest
-        output_name: macos
+          os: macos-latest
+          output_name: macos
 
     runs-on: ${{ matrix.os }}
   
