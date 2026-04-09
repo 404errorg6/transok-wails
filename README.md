@@ -37,7 +37,7 @@
 - [x] i18n
 - [x] Custom port
 - [x] Encrypted file sharing
-- [ ] Discover sharing devices in the local network[redo]
+- [x] Discover sharing devices in the local network[redo]
 - [ ] Right-click to add in Finder/File Explorer
 
 ---
