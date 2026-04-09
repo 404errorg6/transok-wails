@@ -1,0 +1,32 @@
+name: Wails Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+ NODE_OPTIONS: "--max-old-size=4096"
+
+jobs:
+  build:
+  strategy:
+    fail-fast: false
+    matrix:
+      os: [ubuntu-latest, windows-latest, macos-latest]
+
+  runs-on: ${{ matrix.os }}
+  
+  steps:
+    - name: 'Checkout code'
+      uses: actions/checkout@v4
+
+    - name: 'Install wails'
+      run: go install github.com/wailsapp/wails/v2/cmd/wails@latest 
+      
+    - name: 'Build app'
+      run: cd transok-wails && wails build && ls build/bin
+
