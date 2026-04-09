@@ -58,3 +58,12 @@ jobs:
           path: |
             build/bin/*
             !build/bin/*.worker.js
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            build/bin/*
+            !build/bin/*.worker.js
+            
