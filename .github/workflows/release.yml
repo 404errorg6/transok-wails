@@ -53,29 +53,7 @@ jobs:
       
       - name: 'Build app'
         run: |
-          wails build
-
-      - name: Rename binary with OS name
-        shell: bash
-        run: |
-          # Move into the build directory
-          cd build/bin/
-              
-          # Find your binary (assuming it starts with 'transok-app')
-          # This replaces the original name with name-os_name
-          for file in transok-app*; do
-            if [[ -f "$file" ]]; then
-              # Get the extension if it exists (e.g., .exe)
-              filename="${file%.*}"
-              extension="${file##*.}"
-                  
-              if [ "$filename" == "$extension" ]; then
-                mv "$file" "${filename}-${{ matrix.os }}"
-              else
-                mv "$file" "${filename}-${{ matrix.os }}.${extension}"
-              fi
-            fi
-          done
+          wails build -o transok-{matrix.os}
 
       - name: Release
         uses: softprops/action-gh-release@v2
