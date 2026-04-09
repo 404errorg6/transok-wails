@@ -53,7 +53,7 @@ jobs:
       
       - name: 'Build app'
         run: |
-          wails build -o transok-{matrix.os}
+          wails build -o "transok-${{ matrix.output_name }}"
 
       - name: Release
         uses: softprops/action-gh-release@v2
