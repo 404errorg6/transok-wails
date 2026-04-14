@@ -52,6 +52,14 @@
 
 ---
 
+# Contributors
+
+Thanks to the following contributors for making this project better:
+
+- [@404errorg6](https://github.com/404errorg6) (Fahad Khan) — Reimplemented the LAN discovery service with `betamos/zeroconf` ([#32](https://github.com/bent2685/transok-wails/pull/32), fixes [#6](https://github.com/bent2685/transok-wails/issues/6))
+
+---
+
 # Sponsor
 
 ☕ If this project has been helpful to you, why not buy me a cup of coffee? This will keep me going.
