@@ -51,6 +51,14 @@
 
 ---
 
+# 贡献者
+
+感谢以下贡献者让这个项目变得更好：
+
+- [@404errorg6](https://github.com/404errorg6) (Fahad Khan) —— 使用 `betamos/zeroconf` 重写了局域网设备发现服务（[#32](https://github.com/bent2685/transok-wails/pull/32)，修复 [#6](https://github.com/bent2685/transok-wails/issues/6)）
+
+---
+
 # Sponsor
 
 ☕ 如果这个项目对你有帮助，为什么不请我喝杯咖啡呢？这将激励我继续开发。
