@@ -44,7 +44,7 @@ func (d *DownloadApi) DownloadFile(c *gin.Context) {
 		resp.Forbidden().WithMsg("Captcha is incorrect").Out()
 		return
 	}
-	// 验证 share-list 是否存在
+	// Verify if share-list exists
 	storage := services.Storage()
 	if storage == nil {
 		resp.ServerErr().WithMsg("storage is nil").Out()
@@ -62,7 +62,7 @@ func (d *DownloadApi) DownloadFile(c *gin.Context) {
 		_ = json.Unmarshal(jsonData, &result)
 	}
 
-	// 验证文件是否在共享列表中
+	// Verify if the file is in the share list
 	exist := false
 	for _, item := range result {
 		if item.Path == filePath {
@@ -75,7 +75,7 @@ func (d *DownloadApi) DownloadFile(c *gin.Context) {
 		return
 	}
 
-	// 打开文件
+	// Open file
 	file, err := os.Open(filePath)
 	if err != nil {
 		resp.ServerErr().WithMsg("Failed to open file").Out()
@@ -91,7 +91,7 @@ func (d *DownloadApi) DownloadFile(c *gin.Context) {
 	fileSize := fileInfo.Size()
 	fileName := filepath.Base(filePath)
 
-	// 中文文件名 & 下载兼容
+	// Chinese filename & download compatibility
 	encodedName := url.PathEscape(fileName)
 	contentDisposition := fmt.Sprintf("attachment; filename*=UTF-8''%s", encodedName)
 
@@ -102,7 +102,7 @@ func (d *DownloadApi) DownloadFile(c *gin.Context) {
 	c.Header("Pragma", "no-cache")
 	c.Header("Expires", "0")
 
-	// 检查是否为 Range 请求（断点续传）
+	// Check if it's a Range request (breakpoint resume)
 	rangeHeader := c.GetHeader("Range")
 	if rangeHeader == "" {
 		c.Header("Content-Length", strconv.FormatInt(fileSize, 10))
@@ -111,7 +111,7 @@ func (d *DownloadApi) DownloadFile(c *gin.Context) {
 		return
 	}
 
-	// 解析 Range
+	// Parse Range
 	var start, end int64
 	if _, err := fmt.Sscanf(rangeHeader, "bytes=%d-%d", &start, &end); err != nil {
 		if _, err := fmt.Sscanf(rangeHeader, "bytes=%d-", &start); err != nil {
@@ -132,14 +132,14 @@ func (d *DownloadApi) DownloadFile(c *gin.Context) {
 	c.Header("Content-Length", strconv.FormatInt(end-start+1, 10))
 	c.Status(206)
 
-	// 移动指针
+	// Move pointer
 	_, err = file.Seek(start, io.SeekStart)
 	if err != nil {
 		resp.ServerErr().WithMsg("Failed to seek file").Out()
 		return
 	}
 
-	// 分块传输
+	// Chunked transfer
 	const bufferSize = 4 * 1024 // 4KB
 	buffer := make([]byte, bufferSize)
 	reader := io.LimitReader(file, end-start+1)
@@ -148,7 +148,7 @@ func (d *DownloadApi) DownloadFile(c *gin.Context) {
 		n, err := reader.Read(buffer)
 		if n > 0 {
 			if _, wErr := c.Writer.Write(buffer[:n]); wErr != nil {
-				return // 连接断开
+				return // Connection disconnected
 			}
 			c.Writer.Flush()
 		}
@@ -162,7 +162,7 @@ func (d *DownloadApi) DownloadFile(c *gin.Context) {
 	}
 }
 
-// 封装文件流输出
+// Encapsulate file stream output
 func httpServeFile(c *gin.Context, file *os.File) {
 	const bufferSize = 64 * 1024 // 64KB
 	buf := make([]byte, bufferSize)

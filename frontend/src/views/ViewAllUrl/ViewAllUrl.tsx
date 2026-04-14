@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 interface IViewAllUrl {}
 
 /**
- * 查看所有分享链接
+ * View all sharing links
  * @param props
  * @returns
  */

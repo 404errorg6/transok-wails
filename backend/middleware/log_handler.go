@@ -14,18 +14,18 @@ import (
 func LogHandler(basePath string) gin.HandlerFunc {
 	logPath := filepath.Join(basePath, "log")
 
-	// 创建日志目录
+	// Create log directory
 	if err := os.MkdirAll(logPath, 0755); err != nil {
-		log.Printf("创建日志目录失败: %v", err)
+		log.Printf("Failed to create log directory: %v", err)
 	}
 
 	logFile, err := os.OpenFile(filepath.Join(basePath, "logs", "gin.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
-		log.Fatalf("无法打开日志文件: %v", err)
+		log.Fatalf("Unable to open log file: %v", err)
 	}
 	logger := log.New(logFile, "[API-LOG]", log.LstdFlags)
 	return func(c *gin.Context) {
-		// 请求开始时间
+		// Request start time
 		startTime := time.Now()
 		var err interface{}
 		defer func() {
@@ -36,11 +36,11 @@ func LogHandler(basePath string) gin.HandlerFunc {
 					errRes = e.Msg
 					businessCode = e.Code
 				}
-				// 请求结束时间
+				// Request end time
 				endTime := time.Now()
-				// 计算请求处理时间
+				// Calculate request processing time
 				processingTime := endTime.Sub(startTime)
-				// 请求信息
+				// Request information
 				reqMethod := c.Request.Method
 				reqURL := c.Request.RequestURI
 				statusCode := c.Writer.Status()
@@ -68,7 +68,7 @@ const (
 )
 
 func (l LogType) String() string {
-	// 申明了一个LogType变量
+	// Declare a LogType variable
 	var api LogType = "apassi"
 	return string(api)
 }

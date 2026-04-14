@@ -8,22 +8,22 @@ import (
 	"transok/backend/consts"
 )
 
-/* 获取环境变量 */
+/* Get environment variables */
 func GetEnv() string {
 	return consts.APP_INFO["env"]
 }
 
 func GetBasePath() string {
 	env := GetEnv()
-	fmt.Println("环境", env)
+	fmt.Println("Environment:", env)
 	if env == "" {
-		env = "dev" // 默认为开发环境
+		env = "dev" // Default to development environment
 	}
 
 	if env == "dev" {
 		return "data"
 	}
-	// 获取适合当前操作系统的基础存储路径
+	// Get the base storage path suitable for the current operating system
 	var basePath string
 	switch runtime.GOOS {
 	case "windows":
@@ -35,9 +35,9 @@ func GetBasePath() string {
 	case "darwin":
 		homeDir, _ := os.UserHomeDir()
 		basePath = filepath.Join(homeDir, "Library", "Application Support", "transok")
-	default: // linux 和其他类 Unix 系统
+	default: // Linux and other Unix-like systems
 		basePath = "/var/lib/transok"
-		// 如果不是 root 用户，使用用户目录
+		// If not root, use user directory
 		if os.Getuid() != 0 {
 			homeDir, _ := os.UserHomeDir()
 			basePath = filepath.Join(homeDir, ".transok")

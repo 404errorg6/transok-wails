@@ -1,14 +1,14 @@
 import { GetLocalIp } from '@wa/services/SystemService'
 
-/* 复制文本 */
+/* Copy text */
 export const copyText = async (text: string): Promise<boolean> => {
   try {
-    // 优先使用 Clipboard API
+    // Prefer Clipboard API
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(text)
       return true
     }
-    // 降级使用 document.execCommand
+    // Fallback to document.execCommand
     const textArea = document.createElement('textarea')
     textArea.value = text
     textArea.style.position = 'fixed'
@@ -21,14 +21,14 @@ export const copyText = async (text: string): Promise<boolean> => {
     textArea.remove()
     return result
   } catch (error) {
-    console.error('复制失败:', error)
+    console.error('Copy failed:', error)
     return false
   }
 }
 
-/* 通过递归获取n层ip, 如果是127.0.0.1则停止递归 */
+/* Recursively get n layers of IPs; stop if 127.0.0.1 */
 export const getLocalIpsDepth = async (depth: number, excludeIps: string[] = []): Promise<string[]> => {
-  // 如果depth不为-1且小于等于0，则返回当前结果
+  // Return current results if depth is not -1 and <= 0
   if (depth !== -1 && depth <= 0) {
     return excludeIps
   }

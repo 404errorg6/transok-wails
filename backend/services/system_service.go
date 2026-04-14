@@ -49,36 +49,36 @@ func (c *SystemService) Start(ctx context.Context, version string) {
 	}
 }
 
-// GetVersion 获取版本号
+// GetVersion returns the version number
 func (c *SystemService) GetVersion() string {
 	return c.version
 }
 
-// GetEnv 获取环境
+// GetEnv returns the environment
 func (c *SystemService) GetEnv() string {
 	return c.env
 }
 
-// 获取本机局域网ip，可以排除指定的IP地址，排除广播和网络地址
+// GetLocalIp gets the local area network IP, allows excluding specific IPs, and filters out broadcast and network addresses
 func (c *SystemService) GetLocalIp(excludeIps []string) string {
-	// 将 excludeIps 转换为 map，便于快速查找
+	// Convert excludeIps to a map for faster lookup
 	excludeMap := make(map[string]bool)
 	for _, ip := range excludeIps {
 		excludeMap[ip] = true
 	}
 
-	// 获取所有网络接口
+	// Get all network interfaces
 	interfaces, err := net.Interfaces()
 	if err != nil {
 		return "127.0.0.1"
 	}
 
-	// 用于存储找到的IP地址
+	// Used to store found IP addresses
 	var classA, classB, classC, publicIP string
 
-	// 遍历所有网络接口
+	// Iterate through all network interfaces
 	for _, iface := range interfaces {
-		// 跳过禁用的接口和回环接口
+		// Skip disabled interfaces and loopback interfaces
 		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
 			continue
 		}
@@ -99,8 +99,8 @@ func (c *SystemService) GetLocalIp(excludeIps []string) string {
 				continue
 			}
 
-			// 排除特殊地址
-			if ip4[0] == 169 && ip4[1] == 254 { // 排除链路本地地址
+			// Exclude special addresses
+			if ip4[0] == 169 && ip4[1] == 254 { // Exclude link-local addresses
 				continue
 			}
 
@@ -109,12 +109,12 @@ func (c *SystemService) GetLocalIp(excludeIps []string) string {
 				continue
 			}
 
-			// 排除网络地址和广播地址
+			// Exclude network and broadcast addresses
 			if ip4[3] == 0 || ip4[3] == 255 {
 				continue
 			}
 
-			// 根据IP地址范围分类存储
+			// Categorize storage based on IP range
 			if !ip4.IsLoopback() {
 				if ip4[0] == 192 && ip4[1] == 168 {
 					classC = ipStr
@@ -129,7 +129,7 @@ func (c *SystemService) GetLocalIp(excludeIps []string) string {
 		}
 	}
 
-	// 按优先级返回IP地址
+	// Return IP address by priority
 	if classC != "" {
 		return classC
 	}

@@ -7,12 +7,12 @@ const DEFAULT_WINDOW_HEIGHT = 768
 const MIN_WINDOW_WIDTH = 960
 const MIN_WINDOW_HEIGHT = 640
 
-// 日志配置
+// Log configuration
 const (
-	ENABLE_LOG           = true // 是否启用文件日志
-	DEFAULT_LOG_MAX_SIZE = 100  // 每个日志文件的最大尺寸（MB）
-	DEFAULT_LOG_BACKUPS  = 3    // 保留的旧日志文件最大数量
-	DEFAULT_LOG_MAX_AGE  = 28   // 保留的旧日志文件最大天数
+	ENABLE_LOG           = true // Whether to enable file logs
+	DEFAULT_LOG_MAX_SIZE = 100  // Maximum size of each log file (MB)
+	DEFAULT_LOG_BACKUPS  = 3    // Maximum number of old log files to keep
+	DEFAULT_LOG_MAX_AGE  = 28   // Maximum number of days to keep old log files
 )
 
 var APP_INFO = map[string]string{

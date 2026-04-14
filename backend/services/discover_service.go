@@ -5,202 +5,171 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
 	"sync"
 	"time"
 	"transok/backend/consts"
 	"transok/backend/utils/logger"
+
 	"transok/backend/utils/mdns"
 
+	"github.com/betamos/zeroconf"
 	"github.com/google/uuid"
-	"github.com/grandcat/zeroconf"
 	"go.uber.org/zap"
 )
 
 type DiscoverService struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	server *zeroconf.Server
-	ticker *time.Ticker
-	done   chan bool
-	id     string
+	ctx     context.Context
+	cancel  context.CancelFunc
+	browser *zeroconf.Client // Added browser client
+	server  *zeroconf.Client // Used as publisher
+	ticker  *time.Ticker
+	done    chan bool
+	id      string
 }
 
 var (
 	discoverService *DiscoverService
 	once            sync.Once
+	discoveryType   = zeroconf.NewType("_transok._tcp")
 )
 
 func GetDiscoverService() *DiscoverService {
 	once.Do(func() {
+		ctx, cancel := context.WithCancel(context.Background())
 		discoverService = &DiscoverService{
-			id: uuid.New().String(),
+			id:     uuid.New().String(),
+			ctx:    ctx,
+			cancel: cancel,
 		}
 	})
 	return discoverService
 }
 
-/* Start 开始监听mdns广播 */
+/* Start starts listening for mDNS broadcasts */
 func (s *DiscoverService) Start() error {
-	logger.Info("开始监听mdns广播...")
-	resolver, err := zeroconf.NewResolver(nil)
-	if err != nil {
-		logger.Error("创建resolver失败", zap.Error(err))
-		return err
+	if s.browser != nil {
+		return nil // Already started
 	}
 
-	s.ctx, s.cancel = context.WithCancel(context.Background())
+	logger.Info("Starting discovery...")
 
-	entries := make(chan *zeroconf.ServiceEntry)
-	go func() {
-		logger.Info("开始浏览服务...")
-		err = resolver.Browse(s.ctx, "_transok._tcp", "local.", entries)
-		if err != nil {
-			logger.Error("浏览服务失败", zap.Error(err))
+	browser := zeroconf.New().Browse(func(e zeroconf.Event) {
+		//		if e.Op != zeroconf.OpAdded {
+		//			return
+		//		}
+
+		logger.Debug("Found device", zap.Any("entry", e))
+
+		var jsonData string
+		for _, txt := range e.Text {
+			if len(txt) > 5 && txt[:5] == "data=" {
+				jsonData = txt[5:]
+				break
+			}
+		}
+
+		if jsonData == "" {
 			return
 		}
-	}()
 
-	go func() {
-		logger.Info("等待服务发现...")
+		// Remove extra escape characters
+		jsonData = strings.ReplaceAll(jsonData, `\"`, `"`)
 
-		for entry := range entries {
-			logger.Debug("收到原始服务条目", zap.Any("entry", entry))
+		var data consts.DiscoverPayload
 
-			// 查找包含数据的 TXT 记录
-			var jsonData string
-			for _, txt := range entry.Text {
-				if len(txt) > 5 && txt[:5] == "data=" {
-					jsonData = txt[5:]
-					break
-				}
-			}
-
-			if jsonData == "" {
-				continue
-			}
-
-			// 去除多余的转义符
-			jsonData = strings.ReplaceAll(jsonData, `\"`, `"`)
-
-			var data consts.DiscoverPayload
-
-			// 解析 JSON 字符串到 DiscoverPayload 结构体
-			if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
-				logger.Error("解析JSON数据失败", zap.Error(err))
-				continue
-			}
-
-			/* 如果发送者是自己，则跳过 */
-			// if data.Sender == s.id {
-			// 	continue
-			// }
-
-			logger.Info("发现服务", zap.Any("data", data))
-
-			// 使用调度器处理消息
-			mdns.GetDispatcher().Dispatch(data)
+		// Parse JSON string into DiscoverPayload struct
+		if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
+			logger.Error("Failed to parse JSON data", zap.Error(err))
+			return
 		}
-	}()
+
+		// Skip if sender is self
+		//if data.Sender == s.id {
+		//	return
+		//}
+
+		logger.Info("Service discovered", zap.Any("data", data))
+		mdns.GetDispatcher().Dispatch(data)
+	}, discoveryType)
+
+	client, err := browser.Open()
+	if err != nil {
+		logger.Error("Error discovering devices", zap.Error(err))
+		return err
+	}
+	s.browser = client
 
 	return nil
 }
 
-/* Broadcast 开始广播服务 */
+/* Broadcast starts broadcasting the service */
 func (s *DiscoverService) Broadcast(port int, payload consts.DiscoverPayload) error {
-	// 构建 DiscoverPayload
+	// Build DiscoverPayload
 	discoverPayload := consts.DiscoverPayload{
 		Type:    payload.Type,
 		Sender:  s.id,
 		Payload: payload.Payload,
 	}
 
-	// 序列化为 JSON
+	// Serialize as JSON
 	jsonBytes, err := json.Marshal(discoverPayload)
 	if err != nil {
-		return fmt.Errorf("序列化payload失败: %v", err)
+		return fmt.Errorf("failed to serialize payload: %v", err)
 	}
 
-	// 将 JSON 字符串作为单个 TXT 记录
+	// Use JSON string as a single TXT record
 	txtRecords := []string{
 		fmt.Sprintf("data=%s", string(jsonBytes)),
 	}
 
-	// 修改服务注册配置
-	server, err := zeroconf.Register(
+	// If already broadcasting, close old one to update payload
+	if s.server != nil {
+		s.server.Close()
+		s.server = nil
+	}
+
+	service := zeroconf.NewService(
+		discoveryType,
 		fmt.Sprintf("TransokService_%s", s.id),
-		"_transok._tcp",
-		"local.",
-		port,
-		txtRecords,
-		nil,
+		uint16(port),
 	)
+	service.Text = txtRecords
+
+	publisher := zeroconf.New().Publish(service)
+	_, err = publisher.Open()
 	if err != nil {
-		logger.Error("注册广播服务失败", zap.Error(err))
+		logger.Error("Error broadcasting service", zap.Error(err))
 		return err
 	}
 
-	// 保存server实例前，确保关闭旧的实例
-	if s.server != nil {
-		s.server.Shutdown()
-	}
-	s.server = server
+	go func() { //Stop broadcast when done
+		<-s.ctx.Done()
+		publisher.Close()
+	}()
 
-	logger.Info("服务已开始广播",
+	s.server = publisher
+
+	logger.Info("Service started broadcasting",
 		zap.String("id", s.id),
 		zap.Int("port", port),
 		zap.Any("payload", discoverPayload),
 	)
+
 	return nil
 }
 
-/* StartPeriodicBroadcast 开始定期广播 */
-func (s *DiscoverService) StartPeriodicBroadcast(port int, payload consts.DiscoverPayload, interval time.Duration) {
-	if s.ticker != nil {
-		return
-	}
-
-	s.ticker = time.NewTicker(interval)
-	s.done = make(chan bool)
-
-	go func() {
-		_ = s.Broadcast(port, payload)
-
-		for {
-			select {
-			case <-s.ticker.C:
-				if s.server != nil {
-					s.server.Shutdown()
-				}
-				_ = s.Broadcast(port, payload)
-			case <-s.done:
-				if s.server != nil {
-					s.server.Shutdown()
-				}
-				return
-			}
-		}
-	}()
-}
-
-/* StopPeriodicBroadcast 停止定期广播 */
-func (s *DiscoverService) StopPeriodicBroadcast() {
-	if s.ticker != nil {
-		s.ticker.Stop()
-		s.done <- true
-		close(s.done)
-		s.ticker = nil
-
-		if s.server != nil {
-			s.server.Shutdown()
-			s.server = nil
-		}
-	}
-}
-
-// 修改 Stop 方法
+// Stop method
 func (s *DiscoverService) Stop() {
-	s.StopPeriodicBroadcast()
 	if s.cancel != nil {
 		s.cancel()
+	}
+	if s.server != nil {
+		s.server.Close()
+		s.server = nil
+	}
+	if s.browser != nil {
+		s.browser.Close()
+		s.browser = nil
 	}
 }

@@ -10,7 +10,7 @@ import (
 
 func Valid(dto interface{}) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 使用传入的dto创建一个新的对象
+		// Create a new object using the passed-in DTO
 		data := reflect.New(reflect.TypeOf(dto)).Interface()
 
 		if err := c.ShouldBindJSON(data); err != nil {

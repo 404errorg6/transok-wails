@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { BrowserOpenURL } from '@runtime/runtime'
 import { GetLocalIp } from '@wa/services/SystemService'
 
-const POLLING_INTERVAL /* 轮询间隔 */ = 1000
+const POLLING_INTERVAL /* Polling interval */ = 1000
 
 const Discover: React.FC = () => {
   const { t } = useTranslation()
@@ -15,7 +15,7 @@ const Discover: React.FC = () => {
   const [error, setError] = useState<string>('')
   const timerRef = useRef<number>()
   const [ip, setIp] = useState<string>('')
-  const deviceIcons /* 设备类型图标 */ = [
+  const deviceIcons /* Device type icons */ = [
     {
       icon: 'i-tabler:brand-apple',
       type: 'darwin'
@@ -30,7 +30,7 @@ const Discover: React.FC = () => {
     }
   ]
 
-  /* 获取设备列表 */
+  /* Get device list */
   const getDiscoverList = async () => {
     try {
       const list = await GetDiscoverList()
@@ -42,7 +42,7 @@ const Discover: React.FC = () => {
       setError(t('discover.fetchError'))
     }
 
-    // 设置下一次轮询
+    // Set the next poll
     timerRef.current = window.setTimeout(getDiscoverList, POLLING_INTERVAL)
   }
 
@@ -54,13 +54,13 @@ const Discover: React.FC = () => {
     setSelfIp()
     getDiscoverList()
 
-    // 清理函数
+    // Cleanup function
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current)
       }
     }
-  }, []) // 仅在组件挂载时执行一次
+  }, []) // Execute only once when component is mounted
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -103,7 +103,7 @@ const Discover: React.FC = () => {
                 <div
                   className="cursor-pointer rd-full duration-300 bg-border/60 w-6 h-6 flex items-center justify-center hover:(bg-pri/30) active:(scale-95)"
                   onClick={() => {
-                    // 浏览器打开address
+                    // Open the address in browser
                     BrowserOpenURL(`http://${device.address}/download/page`)
                   }}>
                   <div className="i-tabler:square-rounded-arrow-up text-text text-3"></div>

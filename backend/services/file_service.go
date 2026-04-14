@@ -39,11 +39,11 @@ func (c *fileService) Start(ctx context.Context) {
 	c.ctx = ctx
 }
 
-/* 可多选选择文件 */
+/* Select multiple files */
 func (c *fileService) SelectFiles() []string {
-	// 打开文件选择对话框,允许多选
+	// Open file selection dialog, allowing multiple selection
 	files, err := runtime.OpenMultipleFilesDialog(c.ctx, runtime.OpenDialogOptions{
-		Title: "选择文件",
+		Title: "Select File",
 	})
 
 	if err != nil {
@@ -53,15 +53,15 @@ func (c *fileService) SelectFiles() []string {
 	return files
 }
 
-/* 通过文件的绝对路径获取File对象 */
+/* Get FileInfo object by absolute file path */
 func (c *fileService) GetFile(path string) *FileInfo {
-	// 获取文件信息
+	// Get file information
 	fileInfo, err := os.Stat(path)
 	if err != nil {
 		return nil
 	}
 
-	// 返回文件对象
+	// Return file object
 	return &FileInfo{
 		Path: path,
 		Name: fileInfo.Name(),
@@ -74,7 +74,7 @@ func (c *fileService) GetShareList() []FileInfo {
 	storage := Storage()
 	shareList, isExist := storage.Get("share-list")
 
-	// 初始化一个空数组
+	// Initialize an empty array
 	result := make([]FileInfo, 0)
 
 	if !isExist {
@@ -82,7 +82,7 @@ func (c *fileService) GetShareList() []FileInfo {
 		return result
 	}
 
-	// 使用 json.Marshal 和 json.Unmarshal 进行类型转换
+	// Use json.Marshal and json.Unmarshal for type conversion
 	if jsonData, err := json.Marshal(shareList); err == nil {
 		json.Unmarshal(jsonData, &result)
 	}

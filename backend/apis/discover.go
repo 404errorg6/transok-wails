@@ -12,7 +12,7 @@ func (d *DiscoverApi) DiscoverList(c *gin.Context) {
 
 }
 
-/* 测试ping */
+/* Test ping */
 func (d *DiscoverApi) Ping(c *gin.Context) {
 	resp.Success().Out()
 }

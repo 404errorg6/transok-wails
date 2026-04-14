@@ -28,7 +28,7 @@ func (s *ShareApi) ShareList(c *gin.Context) {
 		}
 	}
 	if !hasShare {
-		resp.ServerErr().WithMsg("未开启分享").Out()
+		resp.ServerErr().WithMsg("Sharing not enabled").Out()
 		return
 	}
 
@@ -46,7 +46,7 @@ func (s *ShareApi) ShareList(c *gin.Context) {
 	}).Out()
 }
 
-/* 获取是否需要验证码 */
+/* Check if captcha is required */
 func (s *ShareApi) ShouldCaptcha(c *gin.Context) {
 	captcha := services.Share().GetCaptcha()
 	resp.Success().WithData(captcha != "").Out()

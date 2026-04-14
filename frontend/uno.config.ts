@@ -9,12 +9,12 @@ import {
 import presetAnimations from "unocss-preset-animations";
 import { builtinColors, presetShadcn } from "unocss-preset-shadcn";
 /**
- * unocss配置
+ * unocss configuration
  */
 export default defineConfig({
   theme: {
     /**
-     * 颜色预设
+     * Color presets
      */
     colors: {
       pri: "hsl(var(--primary-color))",

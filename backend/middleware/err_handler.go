@@ -11,9 +11,9 @@ func Recover(c *gin.Context) {
 	defer func() {
 		if err := recover(); err != nil {
 
-			// 解析panic抛出的是否为定义好的Error响应体
+			// Check if the panic is a predefined Error response body
 			if e, ok := err.(resp.Err); ok {
-				// 如果是则直接返回
+				// If so, return directly
 				if !e.Success {
 					debug.PrintStack()
 					c.JSON(400, e)
